@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 if ($#ARGV != 1) {
-    die "usage: compare_tests OLD NEW"
+    die "usage: compare-tests OLD NEW"
 }
 
 $is_gdb = 0;
