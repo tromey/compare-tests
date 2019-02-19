@@ -1,0 +1,123 @@
+#!/usr/bin/perl
+
+if ($#ARGV != 1) {
+    die "usage: compare_tests OLD NEW"
+}
+
+$is_gdb = 0;
+
+sub read_tests {
+    my ($filename) = @_;
+    open (FH, "<" . $filename) || die "can't open $filename";
+    %result = ();
+
+    while (<FH>) {
+	chomp;
+
+	if (/=== gdb tests ===/) {
+	    $is_gdb = 1;
+	}
+
+	# Make sure to strip out parenthesized text at the end of the
+	# test name.
+	if (/^(PASS|FAIL|XPASS|XFAIL|KPASS|KFAIL): (.*)( \([^(]+\))$/) {
+	    my $name = $2;
+	    my $status = $1;
+
+	    # In gdb, selftest.exp has different tests depending on
+	    # the configuration.  So, ignore such tests unless they
+	    # fail.
+	    if ($is_gdb && $name =~ m/selftest[.]exp/ && $status == 'PASS') {
+		# Nothing.
+	    } else {
+		if (defined $result{$name}) {
+		    my $i = 2;
+		    while (defined $result{$name . ' (#' . $i . ')'}) {
+			++$i;
+		    }
+		    $name = $name . ' (#' . $i . ')';
+		}
+		$result{$name} = $status;
+	    }
+	}
+    }
+
+    close (FH);
+}
+
+read_tests ($ARGV[0]);
+%old_tests = %result;
+read_tests ($ARGV[1]);
+%new_tests = %result;
+
+%missing = ();
+%improved = ();
+%regressed = ();
+
+foreach $key (sort keys %old_tests) {
+    if (!defined $new_tests{$key}) {
+	$missing{$key} = $old_tests{$key};
+    } elsif ($old_tests{$key} eq $new_tests{$key}) {
+	delete $new_tests{$key};
+    } elsif ($new_tests{$key} eq 'PASS'
+	     || $new_tests{$key} eq 'XPASS'
+	     || $new_tests{$key} eq 'KPASS') {
+	$improved{$key} = $new_tests{$key};
+	delete $new_tests{$key};
+    } else {
+	$regressed{$key} = $new_tests{$key};
+	delete $new_tests{$key};
+    }
+}
+
+$printed = 0;
+if (scalar keys %regressed) {
+    print "================================================================\n";
+    print "Regressions:\n";
+    foreach $key (sort keys %regressed) {
+	print $key, ": ", $old_tests{$key}, " => ", $regressed{$key}, "\n";
+    }
+    $printed = 1;
+}
+
+if (scalar keys %missing) {
+    if ($printed) {
+	print "\n";
+	print "\n";
+    }
+    print "================================================================\n";
+    print "Missing tests:\n";
+    foreach $key (sort keys %missing) {
+	print $key, ": ", $missing{$key}, "\n";
+    }
+    $printed = 1;
+}
+
+if (scalar keys %new_tests) {
+    if ($printed) {
+	print "\n";
+	print "\n";
+    }
+    print "================================================================\n";
+    print "New tests:\n";
+    foreach $key (sort keys %new_tests) {
+	print $key, ": ", $new_tests{$key}, "\n";
+    }
+    $printed = 1;
+}
+
+if (scalar keys %improved) {
+    if ($printed) {
+	print "\n";
+	print "\n";
+    }
+    print "================================================================\n";
+    print "Improvements:\n";
+    foreach $key (sort keys %improved) {
+	print $key, ": ", $old_tests{$key}, " => ", $improved{$key}, "\n";
+    }
+}
+
+if (!$printed) {
+    print "No change!\n";
+}
