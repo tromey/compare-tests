@@ -18,11 +18,13 @@ sub read_tests {
 	    $is_gdb = 1;
 	}
 
-	# Make sure to strip out parenthesized text at the end of the
-	# test name.
-	if (/^(PASS|FAIL|XPASS|XFAIL|KPASS|KFAIL): (.*)( \([^(]+\))$/) {
+	if (/^(PASS|FAIL|XPASS|XFAIL|KPASS|KFAIL): (.*)$/) {
 	    my $name = $2;
 	    my $status = $1;
+
+	    # Make sure to strip out parenthesized text at the end of
+	    # the test name.
+	    $name =~ s/( \([^(]+\))//;
 
 	    # In gdb, selftest.exp has different tests depending on
 	    # the configuration.  So, ignore such tests unless they
