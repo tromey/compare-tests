@@ -1,7 +1,16 @@
 #!/usr/bin/perl
 
+use Getopt::Long;
+
+sub usage {
+    die "usage: compare-tests [--only=NAME] OLD NEW";
+}
+
+my $only = '';
+GetOptions ('only=s', \$only) or usage ();
+
 if ($#ARGV != 1) {
-    die "usage: compare-tests OLD NEW"
+    usage ();
 }
 
 $is_gdb = 0;
@@ -25,6 +34,9 @@ sub read_tests {
 	    # Make sure to strip out parenthesized text at the end of
 	    # the test name.
 	    $name =~ s/( \([^(]+\))//;
+
+	    # If --only was given, limit to a subset of results.
+	    next if $only ne '' && $name !~ m/$only/;
 
 	    # In gdb, selftest.exp has different tests depending on
 	    # the configuration.  So, ignore such tests unless they
