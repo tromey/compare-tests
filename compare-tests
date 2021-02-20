@@ -3,11 +3,13 @@
 use Getopt::Long;
 
 sub usage {
-    die "usage: compare-tests [--only=NAME] OLD NEW";
+    die "usage: compare-tests [--only=NAME] [--no-intermittent] OLD NEW";
 }
 
 my $only = '';
-GetOptions ('only=s', \$only) or usage ();
+my $no_intermittent = 0;
+GetOptions ('only=s', \$only,
+	    'no-intermittent', \$no_intermittent) or usage ();
 
 if ($#ARGV != 1) {
     usage ();
@@ -37,6 +39,11 @@ sub read_tests {
 
 	    # If --only was given, limit to a subset of results.
 	    next if $only ne '' && $name !~ m/$only/;
+
+	    if ($is_gdb && $no_intermittent
+		&& $name =~ m/(process-dies-while-(detaching|handling-bp)|detach-step-over|non-ldr-exit|signal-while-stepping-over-bp-other-thread|fork-plus-threads|step-over-syscall|gcore-stale-thread|watchthreads2|foll-vfork)[.]exp/) {
+		next;
+	    }
 
 	    # In gdb, selftest.exp has different tests depending on
 	    # the configuration.  So, ignore such tests unless they
