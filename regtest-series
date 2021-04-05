@@ -1,0 +1,41 @@
+#!/bin/sh
+
+OUTPUT=/home/tromey/gdb/REGTEST
+mkdir -p $OUTPUT
+
+start=25
+n=26
+BRANCH=submit/minor-symfile-cleanups
+
+SRC=/home/tromey/gdb/binutils-gdb
+BUILD=/home/tromey/gdb/build
+
+xtitle () 
+{ 
+    echo -n -e "\033]2;$*\007";
+    echo -n -e "\033]1;$*\007"
+}
+
+for i in $(seq $start -1 0); do
+    xtitle "Checkout $i"
+    cd $SRC
+    git checkout ${BRANCH}~$i
+
+    xtitle "Build $i"
+    cd $BUILD
+    make -j12 || exit 1
+
+    xtitle "Check $i"
+    cd gdb/testsuite
+    make -j12 check
+
+    mkdir $OUTPUT/$i
+    cp gdb.sum gdb.log $OUTPUT/$i
+
+    if test $i -lt $n; then
+	compare-tests --no-intermittent $OUTPUT/$n/gdb.sum gdb.sum > $OUTPUT/$i/COMPARE
+    fi
+done
+
+cd $SRC
+git checkout $BRANCH

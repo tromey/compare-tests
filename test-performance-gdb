@@ -1,0 +1,33 @@
+#!/bin/sh
+D=/home/tromey/gdb/
+cd $D/build
+
+b=submit/attr-type-safe
+# t/speed-up-reader
+
+Xlist='/tmp/gdb'
+
+rm -f /tmp/Datamash
+
+from=${1:-20}
+
+for i in $(seq $from -1 0); do
+
+  (cd $D/binutils-gdb; git checkout ${b}~$i) || exit 1
+
+  make -j12 || exit 1
+
+  : > /tmp/Inter
+  for X in $Xlist; do
+      echo == $X @ $i ============== | tee -a /tmp/Datamash
+      for j in $(seq 10); do
+	  /bin/time -f %e -a -o /tmp/Inter \
+		    ./gdb/gdb --data-directory ./gdb/data-directory -nx \
+		    -iex 'set debug-file-directory /usr/lib/debug' \
+		    -batch $X
+      done
+
+      datamash --header-out mean 1 sstdev 1 < /tmp/Inter | tee -a /tmp/Datamash
+  done
+
+done

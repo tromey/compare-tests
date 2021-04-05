@@ -1,0 +1,7 @@
+#!/bin/sh
+
+BASE=${1:-"/home/tromey/gdb/test-results"}
+NOW=$(date "+%F")
+
+cp gdb.sum $BASE/$NOW.sum
+cp gdb.log $BASE/$NOW.log
